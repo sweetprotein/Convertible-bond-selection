@@ -1,0 +1,78 @@
+print('''{'感谢使用可转债投资买入指南 V2.0':{'开发者':'Spirder-Fix','QQ':'3261871941','date':'2020-5-24'}}\n''')
+
+import requests,csv
+
+url='https://www.jisilu.cn/data/cbnew/cb_list/?___jsl=LST___t=1590304440609'
+
+headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36'}
+
+data_to_change='''fprice: 
+tprice: 
+curr_iss_amt: 
+volume: 
+svolume: 
+premium_rt: 
+ytm_rt: 
+market: 
+rating_cd: 
+is_search: N
+btype: C
+listed: Y
+sw_cd: 
+bond_ids: 
+rp: 50'''
+
+data = dict([line.split(": ",1) for line in data_to_change.split("\n")])
+
+res=requests.post(url,headers=headers,data=data)
+
+#print(data)
+#print(res.status_code)
+
+json_res=res.json()
+
+lists=json_res['rows'] #获取所有转债列表
+
+invest_ls=[['代码','名称','现价','溢价率','转股代码及转股起始日期','到期税后收益','评级']]
+
+for i in lists:
+    
+    text=i['cell'] #获取单个转债信息列表
+    bond_id=text['bond_id'] #获取单个转债的转债代码
+    bond_nm=text['bond_nm'] #获取单个转债的名称
+    price=text['price'] #获取单个转债的价格
+    premium_rt=text['premium_rt'] #获取单个转债的溢价率
+    ytm_rt_tax=text['ytm_rt_tax'] #获取单个转债的税后到期收益
+    convert_cd=text['convert_cd'] #获取单个转债的转股代码，若未到转股期，则获取的结果为"未到转股期"
+    convert_cd_tip=text['convert_cd_tip'] #获取单个转债的转股代码及起始转股日期
+    rating_cd=text['rating_cd'] #获取单个转债的评级
+    
+    if eval(price)>=110.0:
+        continue
+    else:
+        if eval(premium_rt[:-1])>=20.0: #[:-1]字符串截取，去掉%号
+            continue
+        else:
+            if eval(ytm_rt_tax[:-1])<0.0:#[:-1]字符串截取，去掉%号
+                continue
+            else:
+                if convert_cd =='未到转股期':
+                    continue
+                else:
+                    if rating_cd in ['AA','AA+','AAA']:
+                        invest_ls.append([ bond_id,bond_nm,price,premium_rt,convert_cd_tip,ytm_rt_tax,rating_cd])
+            
+#将数据导出直同层文件录内的invest_list.csv文件里
+with open ('./invest_list.csv','w',encoding='utf-8') as f:
+    writer=csv.writer(f)
+    for row in invest_ls:
+        writer.writerow(row)
+
+#打印结果
+for bond in invest_ls:
+    print(bond)
+
+a=1        
+while a:
+    a=eval(input('退出请输入数字0：'))
+    
